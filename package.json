@@ -1,0 +1,8 @@
+{
+  "name": "neon-dash",
+  "version": "1.0.0",
+  "description": "A small but addictive one-button arcade game",
+  "scripts": {
+    "dev": "python3 -m http.server 8080"
+  }
+}
