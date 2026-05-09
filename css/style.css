@@ -1,0 +1,228 @@
+/* ===========================================================
+   Neon Dash — Stylesheet
+   Full-bleed neon aesthetic. Dark background, cyan highlights.
+   =========================================================== */
+
+/* ---------- Reset & Base ---------- */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0a0a0a;
+  font-family: 'Courier New', Courier, monospace;
+  color: #00ffff;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---------- Canvas ---------- */
+#gameCanvas {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  /* border applied via JS or inline; CSS border as fallback */
+  border: 2px solid #00ffff;
+  image-rendering: auto;
+}
+
+/* ---------- Score Displays ---------- */
+#scoreDisplay {
+  position: fixed;
+  top: 12px;
+  left: 16px;
+  color: #00ffff;
+  font-size: 22px;
+  font-weight: bold;
+  pointer-events: none;
+  z-index: 5;
+  text-shadow: 0 0 6px #00ffff;
+}
+
+#bestScoreDisplay {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  color: #ff00ff;
+  font-size: 18px;
+  pointer-events: none;
+  z-index: 5;
+  text-shadow: 0 0 6px #ff00ff;
+}
+
+/* ---------- Overlays ---------- */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 10;
+  pointer-events: auto;
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+/* Title in instructions overlay */
+.title {
+  font-size: 52px;
+  color: #00ffff;
+  text-shadow:
+    0 0 10px #00ffff,
+    0 0 30px #00ffff;
+  margin-bottom: 30px;
+  letter-spacing: 6px;
+}
+
+/* Subtitle / hint text */
+.subtitle {
+  font-size: 16px;
+  color: #ff00ff;
+  margin-bottom: 24px;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.subtitle kbd {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px solid #ff00ff;
+  border-radius: 3px;
+  font-family: inherit;
+  color: #ff00ff;
+  background: rgba(255, 0, 255, 0.1);
+}
+
+/* Game-over title */
+.game-over-title {
+  font-size: 48px;
+  color: #ff00ff;
+  text-shadow:
+    0 0 10px #ff00ff,
+    0 0 30px #ff00ff;
+  margin-bottom: 24px;
+}
+
+/* Score display inside game-over overlay */
+#finalScore {
+  font-size: 22px;
+  color: #00ffff;
+  margin-bottom: 8px;
+}
+
+#finalBest {
+  font-size: 18px;
+  color: #ff00ff;
+  margin-bottom: 30px;
+}
+
+/* ---------- Blinking Animation ---------- */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.2; }
+}
+
+.blink {
+  animation: blink 1.4s ease-in-out infinite;
+}
+
+.prompt {
+  font-size: 16px;
+  color: #00ffff;
+}
+
+/* ---------- Screen Shake ---------- */
+@keyframes shake {
+  0%, 100% { transform: translate(0, 0); }
+  10%      { transform: translate(-4px, 2px); }
+  20%      { transform: translate(3px, -3px); }
+  30%      { transform: translate(-2px, 1px); }
+  40%      { transform: translate(1px, -1px); }
+  50%      { transform: translate(-1px, 0); }
+  60%      { transform: translate(0, 1px); }
+  70%      { transform: translate(0, 0); }
+}
+
+.shake {
+  animation: shake 0.35s ease-out;
+}
+
+/* ---------- Sound Toggle Button ---------- */
+#soundToggle {
+  position: fixed;
+  bottom: 14px;
+  right: 14px;
+  width: 44px;
+  height: 44px;
+  border: 1px solid #00ffff;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #00ffff;
+  font-size: 20px;
+  cursor: pointer;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s, color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#soundToggle:hover,
+#soundToggle:focus-visible {
+  border-color: #ff00ff;
+  color: #ff00ff;
+  outline: none;
+}
+
+#soundToggle:active {
+  transform: scale(0.95);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 600px) {
+  .title {
+    font-size: 36px;
+    letter-spacing: 4px;
+  }
+
+  .game-over-title {
+    font-size: 32px;
+  }
+
+  #scoreDisplay {
+    font-size: 18px;
+    top: 8px;
+    left: 10px;
+  }
+
+  #bestScoreDisplay {
+    font-size: 15px;
+    top: 8px;
+    right: 10px;
+  }
+
+  #soundToggle {
+    width: 38px;
+    height: 38px;
+    font-size: 18px;
+    bottom: 10px;
+    right: 10px;
+  }
+}

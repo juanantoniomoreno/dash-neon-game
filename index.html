@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Neon Dash</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Main game canvas -->
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- Score display — top left, cyan -->
+  <div id="scoreDisplay">0</div>
+
+  <!-- Best score display — top right, magenta -->
+  <div id="bestScoreDisplay">BEST 0</div>
+
+  <!-- Instructions overlay — shown in menu state -->
+  <div id="instructionsOverlay" class="overlay">
+    <h1 class="title">NEON DASH</h1>
+    <p class="subtitle">Press <kbd>SPACE</kbd>, <kbd>ENTER</kbd>, or <kbd>TAP</kbd> to dash</p>
+    <p class="blink prompt">Press any key to start</p>
+  </div>
+
+  <!-- Game-over overlay — shown in dead state after effects -->
+  <div id="gameOverOverlay" class="overlay hidden">
+    <h2 class="game-over-title">GAME OVER</h2>
+    <p id="finalScore">Score: 0</p>
+    <p id="finalBest">Best: 0</p>
+    <p class="blink prompt">Press any key to restart</p>
+  </div>
+
+  <!-- Sound toggle button — bottom right -->
+  <button id="soundToggle" title="Toggle Sound" aria-label="Toggle Sound">&#x1F50A;</button>
+
+  <!--
+    Scripts loaded in strict dependency order:
+    render.js  — canvas setup, drawing primitives, background cache, shake
+    input.js   — keyboard/touch normalization, cooldown, death lock
+    audio.js   — lazy AudioContext, oscillator-based SFX
+    particles.js — particle emitter, update, life management
+    player.js  — player entity: dash physics, i-frames, trail
+    obstacles.js — obstacle spawner, patterns, AABB collision
+    main.js    — state machine, game loop, score, module wiring
+  -->
+  <script src="js/render.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/particles.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/obstacles.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
