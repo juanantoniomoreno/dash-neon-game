@@ -18,12 +18,12 @@ window.NEON.Render = (function () {
   'use strict';
 
   /* ---- internal state ---- */
-  let canvas;
-  let ctx;
-  let bgCanvas;      // offscreen canvas for static background grid
-  let bgCtx;         // offscreen context
-  let shakeAmount = 0;
-  let isMobile = false;
+  var canvas;
+  var ctx;
+  var bgCanvas;      // offscreen canvas for static background grid
+  var bgCtx;         // offscreen context
+  var shakeAmount = 0;
+  var isMobile = false;
 
   /** Parse a hex colour string like '#ff00ff' into {r, g, b} integers. */
   function _hexToRgb(hex) {
