@@ -138,9 +138,9 @@ window.NEON.Obstacles = (function () {
         break;
 
       case 'double': {
-        var bottomH = 25 + Math.random() * 16;  // 25–41
-        var gap     = 10 + Math.random() * 5;   // 10–15
-        var topH    = 25 + Math.random() * 16;  // 25–41
+        var bottomH = 15 + Math.random() * 10;  // 15–25
+        var gap     = 28 + Math.random() * 8;   // 28–36 (must be > 24 for player to fit)
+        var topH    = 15 + Math.random() * 10;  // 15–25
         var dw      = 15 + Math.random() * 16;  // 15–31 (same range as block width)
 
         obstacles.push({
