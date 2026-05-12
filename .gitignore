@@ -1,0 +1,53 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+
+# Linux
+*~
+.directory
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# Logs
+*.log
+logs/
+
+# Dependency directories
+node_modules/
+
+# Build / dist
+build/
+dist/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# SDD tooling artifacts
+.atl/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+
+# OS generated files
+*.lnk
+Desktop.ini
