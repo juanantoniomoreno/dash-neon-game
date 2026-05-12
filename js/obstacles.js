@@ -320,6 +320,15 @@ window.NEON.Obstacles = (function () {
     return false;
   }
 
+  /**
+   * Return the array of active obstacles (for external iteration, e.g. near-miss).
+   *
+   * @returns {object[]}  Array of obstacle objects
+   */
+  function getAll() {
+    return obstacles;
+  }
+
   /* ---- public exports ---- */
   return {
     init: init,
@@ -327,6 +336,7 @@ window.NEON.Obstacles = (function () {
     resize: resize,
     update: update,
     draw: draw,
-    checkCollision: checkCollision
+    checkCollision: checkCollision,
+    getAll: getAll
   };
 })();

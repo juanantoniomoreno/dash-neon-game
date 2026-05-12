@@ -11,7 +11,7 @@
  *   - UI updates: score display, best score, overlay toggles
  *   - Sound toggle button wiring
  *   - Difficulty ramp: obstacle speed increases over elapsed time
- *   - Milestone sounds + particles every 10 points
+ *   - Milestone sounds + particles every 50 points
  *   - Screen shake on death (delegated to Render)
  *   - Jump particles on jump, death particles, milestone particles
  *
@@ -36,7 +36,11 @@ window.NEON.Game = (function () {
   var bestScore      = 0;
   var elapsed        = 0;        // seconds spent in current play session
   var speed          = BASE_SPEED;
-  var lastMilestone  = 0;        // floor(score / 10) of last triggered milestone
+  var lastMilestone  = 0;        // floor(score / 50) of last triggered milestone
+  var multiplier     = 1;        // score multiplier (x2 on near-miss)
+  var multiplierTimer = 0;       // remaining time for current multiplier (seconds)
+  var nearMissCooldown = 0;      // prevents near-miss spam (seconds)
+  var popups         = [];       // floating score/milestone popups {x, y, text, life, maxLife}
   var lastTime       = 0;        // last rAF timestamp (0 = first frame)
   var requestId      = null;     // rAF handle
   var isMobile        = false;
@@ -80,7 +84,16 @@ window.NEON.Game = (function () {
     elapsed = 0;
     speed = BASE_SPEED;
     lastMilestone = 0;
+    multiplier = 1;
+    multiplierTimer = 0;
+    nearMissCooldown = 0;
+    popups = [];
     lastTime = 0;            // force dt = 0 on next frame
+
+    // Register landing dust callback
+    NEON.Player.onLand(function (px, py) {
+      NEON.Particles.emit(px, py, 4 + Math.floor(Math.random() * 4), NEON.Zones.getZoneColor());
+    });
 
     _updateScoreDisplay();
   }
@@ -244,11 +257,24 @@ window.NEON.Game = (function () {
     // ---- particles ----
     NEON.Particles.update(dt);
 
-    // ---- score (time-based) ----
-    score += dt * SCORE_RATE;
+    // ---- multiplier & cooldown timers ----
+    if (multiplierTimer > 0) {
+      multiplierTimer -= dt;
+      if (multiplierTimer <= 0) {
+        multiplierTimer = 0;
+        multiplier = 1;
+      }
+    }
+    if (nearMissCooldown > 0) {
+      nearMissCooldown -= dt;
+      if (nearMissCooldown < 0) nearMissCooldown = 0;
+    }
 
-    // ---- milestone check (every 10 points) ----
-    var currentMilestone = Math.floor(score / 10);
+    // ---- score (time-based, with multiplier) ----
+    score += dt * SCORE_RATE * multiplier;
+
+    // ---- milestone check (every 50 points) ----
+    var currentMilestone = Math.floor(score / 50);
     if (currentMilestone > lastMilestone) {
       lastMilestone = currentMilestone;
 
@@ -263,15 +289,56 @@ window.NEON.Game = (function () {
         8 + Math.floor(Math.random() * 5),   // 8–12 particles
         '#00ffff'
       );
+
+      // Milestone score popup
+      addPopup(Math.floor(score) + '!', mb.x + mb.w / 2, mb.y - 20);
+    }
+
+    // ---- popup lifecycle ----
+    for (var pi = popups.length - 1; pi >= 0; pi--) {
+      popups[pi].life -= dt;
+      popups[pi].y -= 60 * dt;   // rise upward
+      if (popups[pi].life <= 0) {
+        popups.splice(pi, 1);
+      }
     }
 
     // Always keep the score display current
     _updateScoreDisplay();
 
     // ---- collision detection (skip if invincible) ----
+    var playerBounds = NEON.Player.getBounds();
     if (!NEON.Player.isInvincible()) {
-      if (NEON.Obstacles.checkCollision(NEON.Player.getBounds())) {
+      if (NEON.Obstacles.checkCollision(playerBounds)) {
         _handleDeath();
+      }
+    }
+
+    // ---- near-miss detection ----
+    var obsList = NEON.Obstacles.getAll();
+    for (var oi = 0; oi < obsList.length; oi++) {
+      var obs = obsList[oi];
+      // Obstacle just passed the player?
+      if (obs.x + obs.width < playerBounds.x && !obs.nearMissChecked) {
+        obs.nearMissChecked = true;
+
+        // Compute obstacle top Y
+        var obsTop = obs.y;
+        if (obs.type === 'double' && obs.rects && obs.rects.length >= 2) {
+          // Double obstacle: top is the upper rect's top (smaller Y)
+          obsTop = obs.rects[0].y < obs.rects[1].y ? obs.rects[0].y : obs.rects[1].y;
+        }
+
+        // Vertical gap: distance between player's feet and obstacle's top
+        var playerFeetY = playerBounds.y + playerBounds.h;
+        var gap = Math.abs(playerFeetY - obsTop);
+
+        if (gap <= 8 && nearMissCooldown <= 0) {
+          multiplier = 2;
+          multiplierTimer = 3.0;
+          nearMissCooldown = 0.5;
+          addPopup('x2', playerBounds.x + playerBounds.w / 2, playerBounds.y - 10);
+        }
       }
     }
   }
@@ -344,11 +411,23 @@ window.NEON.Game = (function () {
     NEON.Player.draw();
     NEON.Obstacles.draw();
     NEON.Particles.draw();
+    NEON.Render.drawPopups(popups);
   }
 
   /* =============================================================== */
   /*  UI HELPERS                                                     */
   /* =============================================================== */
+
+  /**
+   * Add a floating popup that rises and fades.
+   *
+   * @param {string} text  Popup text (e.g. 'x2', '50!')
+   * @param {number} x     X position on canvas
+   * @param {number} y     Y position on canvas
+   */
+  function addPopup(text, x, y) {
+    popups.push({ x: x, y: y, text: text, life: 1.5, maxLife: 1.5 });
+  }
 
   /**
    * Update score and best-score DOM elements.
