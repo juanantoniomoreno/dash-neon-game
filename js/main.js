@@ -72,6 +72,8 @@ window.NEON.Game = (function () {
     NEON.Player.reset();
     NEON.Obstacles.reset();
     NEON.Particles.init();   // clears all active particles
+    NEON.Zones.init();       // revert to zone 0 with no crossfade
+    NEON.Player.setColor('#00ffff');  // reset to default cyan
 
     // Reset tracking
     score = 0;
@@ -200,6 +202,16 @@ window.NEON.Game = (function () {
    * particles, score, collision.
    */
   function _updatePlaying(dt) {
+    // ---- zone progression ----
+    var prevZoneName = NEON.Zones.getCurrentZone().name;
+    NEON.Zones.update(score, dt);
+    var currentZone = NEON.Zones.getCurrentZone();
+
+    // On zone transition, push the new player colour
+    if (currentZone.name !== prevZoneName) {
+      NEON.Player.setColor(NEON.Zones.getZoneColor());
+    }
+
     // ---- difficulty ramp: speed increases with time ----
     elapsed += dt;
     speed = BASE_SPEED + elapsed * SPEED_RAMP;
@@ -227,7 +239,7 @@ window.NEON.Game = (function () {
     }
 
     // ---- obstacles ----
-    NEON.Obstacles.update(dt, speed);
+    NEON.Obstacles.update(dt, speed, NEON.Zones.getSpawnWeights());
 
     // ---- particles ----
     NEON.Particles.update(dt);
@@ -322,6 +334,11 @@ window.NEON.Game = (function () {
     // Ground platform (85 % of canvas height, consistent with Player/Obstacles)
     var canvas = document.getElementById('gameCanvas');
     var groundY = canvas.height * 0.85;
+
+    // Zone background tint overlay (after static background, before entities)
+    var zone = NEON.Zones.getCurrentZone();
+    NEON.Render.drawBgTint(zone.bgTint, NEON.Zones.getCrossfadeAlpha());
+
     NEON.Render.drawGround(groundY, '#00ffff');
 
     NEON.Player.draw();
@@ -403,6 +420,7 @@ window.NEON.Game = (function () {
 
     // ---- initialise all modules (strict dependency order) ----
     NEON.Render.init();
+    NEON.Zones.init();
     NEON.Input.init();
     NEON.Audio.init();
     NEON.Particles.init();

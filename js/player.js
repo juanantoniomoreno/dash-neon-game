@@ -22,7 +22,7 @@ window.NEON.Player = (function () {
   /* ---- constants ---- */
   var WIDTH          = 24;
   var HEIGHT         = 24;
-  var COLOR          = '#00ffff';   // cyan — matches the neon aesthetic
+  var COLOR          = '#00ffff';   // cyan — default, overridden per zone
   var IFRAME_MS      = 80;          // invincibility duration after jump
   var GRAVITY        = 1200;        // px/s² — downward pull
   var JUMP_VELOCITY  = -450;        // px/s — initial upward speed (negative = up)
@@ -38,6 +38,9 @@ window.NEON.Player = (function () {
   var trail = [];            // ring buffer of {x, y} positions
   var trailMax;              // max trail entries for this device
   var isMobile;              // cached mobile detection
+  var currentColor = COLOR;  // active player colour (set by zones via setColor)
+  var wasAirborne = false;   // airborne state from PREVIOUS frame
+  var onLandCallback = null; // callback(isInvincible(X, Y), py of feet)
 
   /* ---- public API ---- */
 
@@ -133,6 +136,14 @@ window.NEON.Player = (function () {
     if (trail.length > trailMax) {
       trail.shift();
     }
+
+    // ---- landing callback (airborne → grounded transition) ----
+    if (wasAirborne && grounded && onLandCallback) {
+      onLandCallback(x + WIDTH / 2, y + HEIGHT);
+    }
+
+    // Track airborne state for next frame
+    wasAirborne = !grounded;
   }
 
   /**
@@ -146,7 +157,7 @@ window.NEON.Player = (function () {
       y: y,
       width: WIDTH,
       height: HEIGHT,
-      color: COLOR,
+      color: currentColor,
       trail: trail,
       isInvincible: iframeTimer > 0
     });
@@ -187,6 +198,36 @@ window.NEON.Player = (function () {
     return iframeTimer > 0;
   }
 
+  /**
+   * Set the player's active colour (called by main on zone transition).
+   *
+   * @param {string} hex  Hex colour (e.g. '#ffaa00')
+   */
+  function setColor(hex) {
+    if (hex) {
+      currentColor = hex;
+    }
+  }
+
+  /**
+   * Return the player's current active colour.
+   *
+   * @returns {string}  Hex colour
+   */
+  function getColor() {
+    return currentColor;
+  }
+
+  /**
+   * Register a callback to fire on landing (airborne → grounded transition).
+   * The callback receives (x, y) of the player's feet position.
+   *
+   * @param {Function} cb  Callback(centerX, feetY)
+   */
+  function onLand(cb) {
+    onLandCallback = cb;
+  }
+
   /* ---- public exports ---- */
   return {
     init: init,
@@ -196,6 +237,9 @@ window.NEON.Player = (function () {
     draw: draw,
     jump: jump,
     getBounds: getBounds,
-    isInvincible: isInvincible
+    isInvincible: isInvincible,
+    setColor: setColor,
+    getColor: getColor,
+    onLand: onLand
   };
 })();

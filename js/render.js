@@ -196,14 +196,25 @@ window.NEON.Render = (function () {
 
   /**
    * Draw all active obstacles.
+   * Branches on obstacle type for shape-aware rendering.
    *
-   * @param {object[]} obstacles  Array of { x, y, width, height, color }
+   * @param {object[]} obstacles  Array of { x, y, width, height, color, type, [rects] }
    */
   function drawObstacles(obstacles) {
     if (!obstacles || obstacles.length === 0) return;
     for (var i = 0; i < obstacles.length; i++) {
       var o = obstacles[i];
-      _drawNeonRect(o.x, o.y, o.width, o.height, o.color, 3);
+
+      // Double obstacles: draw both rects (gap visible between them)
+      if (o.type === 'double' && o.rects) {
+        for (var j = 0; j < o.rects.length; j++) {
+          var r = o.rects[j];
+          _drawNeonRect(r.x, r.y, r.w, r.h, o.color, 3);
+        }
+      } else {
+        // Block, pillar, wide, and any untyped obstacle
+        _drawNeonRect(o.x, o.y, o.width, o.height, o.color, 3);
+      }
     }
   }
 
@@ -310,6 +321,51 @@ window.NEON.Render = (function () {
     ctx.restore();
   }
 
+  /**
+   * Draw a full-canvas semi-transparent tint overlay for zone transitions.
+   *
+   * @param {string} color  Hex colour for the tint
+   * @param {number} alpha  Crossfade alpha value (0 → 1)
+   */
+  function drawBgTint(color, alpha) {
+    if (!color || alpha <= 0) return;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = alpha * 0.35;
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  /**
+   * Draw floating score/milestone popup text.
+   * Each popup rises and fades over its lifetime.
+   *
+   * @param {object[]} popups  Array of { x, y, text, life, maxLife }
+   */
+  function drawPopups(popups) {
+    if (!popups || popups.length === 0) return;
+    ctx.save();
+    for (var i = 0; i < popups.length; i++) {
+      var p = popups[i];
+      if (p.life <= 0) continue;
+      var alpha = p.life / p.maxLife;
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 18px "Courier New", monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = '#00ffff';
+      ctx.shadowBlur = 8;
+      ctx.fillText(p.text, p.x, p.y);
+    }
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
   /* ---- private: background cache ---- */
 
   /**
@@ -363,10 +419,12 @@ window.NEON.Render = (function () {
     resize: resize,
     clear: clear,
     drawBackground: drawBackground,
+    drawBgTint: drawBgTint,
     drawGround: drawGround,
     drawPlayer: drawPlayer,
     drawObstacles: drawObstacles,
     drawParticles: drawParticles,
+    drawPopups: drawPopups,
     setShake: setShake,
     updateShake: updateShake,
     drawOverlay: drawOverlay
