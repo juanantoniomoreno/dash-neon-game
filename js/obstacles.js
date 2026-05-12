@@ -33,6 +33,7 @@ window.NEON.Obstacles = (function () {
   var DIFFICULTY_HARD_AT   = 55;       // switch to hard after 55 s
 
   /* ---- internal state ---- */
+  var currentObstacleColor = COLOR;  // active obstacle colour (overridden per zone)
   var obstacles = [];         // array of obstacle objects { x, y, width, height, color }
   var spawnTimer = 0;         // countdown to next spawn (seconds)
   var elapsed = 0;            // total elapsed time for difficulty ramp
@@ -118,7 +119,7 @@ window.NEON.Obstacles = (function () {
           y: groundY - h,
           width: w,
           height: h,
-          color: COLOR,
+          color: currentObstacleColor,
           type: 'pillar'
         });
         break;
@@ -131,7 +132,7 @@ window.NEON.Obstacles = (function () {
           y: groundY - h,
           width: w,
           height: h,
-          color: COLOR,
+          color: currentObstacleColor,
           type: 'wide'
         });
         break;
@@ -147,7 +148,7 @@ window.NEON.Obstacles = (function () {
           y: groundY - bottomH,
           width: dw,
           height: bottomH + gap + topH,
-          color: COLOR,
+          color: currentObstacleColor,
           type: 'double',
           rects: [
             { x: canvasWidth, y: groundY - bottomH, w: dw, h: bottomH },
@@ -165,7 +166,7 @@ window.NEON.Obstacles = (function () {
           y: groundY - h,
           width: w,
           height: h,
-          color: COLOR,
+          color: currentObstacleColor,
           type: 'block'
         });
         break;
@@ -218,6 +219,7 @@ window.NEON.Obstacles = (function () {
     elapsed      = 0;
     difficulty   = 'easy';
     spawnInterval = SPAWN_EASY;
+    currentObstacleColor = COLOR;
 
     // Re-read canvas dimensions in case of resize
     var canvas = document.getElementById('gameCanvas');
@@ -321,6 +323,17 @@ window.NEON.Obstacles = (function () {
   }
 
   /**
+   * Set the active obstacle colour (called by main on zone transition).
+   *
+   * @param {string} hex  Hex colour (e.g. '#ffaa00')
+   */
+  function setColor(hex) {
+    if (hex) {
+      currentObstacleColor = hex;
+    }
+  }
+
+  /**
    * Return the array of active obstacles (for external iteration, e.g. near-miss).
    *
    * @returns {object[]}  Array of obstacle objects
@@ -337,6 +350,7 @@ window.NEON.Obstacles = (function () {
     update: update,
     draw: draw,
     checkCollision: checkCollision,
+    setColor: setColor,
     getAll: getAll
   };
 })();

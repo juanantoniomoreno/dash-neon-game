@@ -41,6 +41,7 @@ window.NEON.Game = (function () {
   var multiplierTimer = 0;       // remaining time for current multiplier (seconds)
   var nearMissCooldown = 0;      // prevents near-miss spam (seconds)
   var popups         = [];       // floating score/milestone popups {x, y, text, life, maxLife}
+  var shownZonePopup = false;    // prevents zone name popup from showing every frame
   var lastTime       = 0;        // last rAF timestamp (0 = first frame)
   var requestId      = null;     // rAF handle
   var isMobile        = false;
@@ -88,6 +89,7 @@ window.NEON.Game = (function () {
     multiplierTimer = 0;
     nearMissCooldown = 0;
     popups = [];
+    shownZonePopup = false;
     lastTime = 0;            // force dt = 0 on next frame
 
     // Register landing dust callback
@@ -216,13 +218,21 @@ window.NEON.Game = (function () {
    */
   function _updatePlaying(dt) {
     // ---- zone progression ----
-    var prevZoneName = NEON.Zones.getCurrentZone().name;
     NEON.Zones.update(score, dt);
     var currentZone = NEON.Zones.getCurrentZone();
+    var transitioning = NEON.Zones.isTransitioning();
 
-    // On zone transition, push the new player colour
-    if (currentZone.name !== prevZoneName) {
-      NEON.Player.setColor(NEON.Zones.getZoneColor());
+    // Zone transition popup and colour swap (once per transition)
+    if (transitioning) {
+        if (!shownZonePopup) {
+            var canvas = document.getElementById('gameCanvas');
+            addPopup(currentZone.name.toUpperCase(), canvas.width / 2, canvas.height / 3);
+            NEON.Player.setColor(NEON.Zones.getZoneColor());
+            NEON.Obstacles.setColor(NEON.Zones.getObstacleColor());
+            shownZonePopup = true;
+        }
+    } else {
+        shownZonePopup = false;
     }
 
     // ---- difficulty ramp: speed increases with time ----
