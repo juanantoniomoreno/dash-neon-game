@@ -240,6 +240,8 @@ window.NEON.Game = (function () {
     speed = BASE_SPEED + elapsed * SPEED_RAMP;
 
     // ---- player physics (gravity + jump arc) ----
+    // Hold-to-jump: reduced gravity while jump key is held and rising
+    NEON.Player.setJumpHeld(NEON.Input.isHeld());
     NEON.Player.update(dt);
 
     // ---- jump input ----

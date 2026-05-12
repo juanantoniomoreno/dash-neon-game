@@ -24,7 +24,8 @@ window.NEON.Player = (function () {
   var HEIGHT         = 24;
   var COLOR          = '#00ffff';   // cyan — default, overridden per zone
   var IFRAME_MS      = 80;          // invincibility duration after jump
-  var GRAVITY        = 1200;        // px/s² — downward pull
+  var GRAVITY        = 1200;        // px/s² — downward pull (normal)
+  var GRAVITY_HELD   = 350;         // px/s² — reduced gravity while jump key is held
   var JUMP_VELOCITY  = -450;        // px/s — initial upward speed (negative = up)
   var TRAIL_DESKTOP  = 15;          // trail buffer size on desktop
   var TRAIL_MOBILE   = 8;           // trail buffer size on mobile
@@ -41,6 +42,7 @@ window.NEON.Player = (function () {
   var currentColor = COLOR;  // active player colour (set by zones via setColor)
   var wasAirborne = false;   // airborne state from PREVIOUS frame
   var onLandCallback = null; // callback(isInvincible(X, Y), py of feet)
+  var jumpHeld = false;      // true while jump key is held — reduces gravity
 
   /* ---- public API ---- */
 
@@ -116,7 +118,10 @@ window.NEON.Player = (function () {
 
     // ---- gravity: pull the player down when airborne ----
     if (!grounded) {
-      velocityY += GRAVITY * dt;
+      // Reduced gravity while jump key is held and still rising —
+      // allows variable jump height by holding longer
+      var g = (jumpHeld && velocityY < 0) ? GRAVITY_HELD : GRAVITY;
+      velocityY += g * dt;
     }
 
     // ---- update Y position ----
@@ -228,6 +233,16 @@ window.NEON.Player = (function () {
     onLandCallback = cb;
   }
 
+  /**
+   * Set whether the jump key is currently held down.
+   * When held, gravity is reduced while rising, allowing a higher jump.
+   *
+   * @param {boolean} held
+   */
+  function setJumpHeld(held) {
+    jumpHeld = held;
+  }
+
   /* ---- public exports ---- */
   return {
     init: init,
@@ -240,6 +255,7 @@ window.NEON.Player = (function () {
     isInvincible: isInvincible,
     setColor: setColor,
     getColor: getColor,
-    onLand: onLand
+    onLand: onLand,
+    setJumpHeld: setJumpHeld
   };
 })();

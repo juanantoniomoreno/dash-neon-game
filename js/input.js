@@ -27,8 +27,11 @@ window.NEON.Input = (function () {
   var _consumed = false;           // set true after isPressed() returns true
   var _lastPressTime = 0;          // performance.now() of last registered press
   var _lockUntil = 0;              // performance.now() timestamp until which input is ignored
+  var _jumpHeld = false;           // true while jump key/touch is actively held down
   var _boundOnKey = null;          // bound keydown handler (for potential cleanup)
   var _boundOnTouch = null;        // bound touchstart handler
+  var _boundOnKeyUp = null;        // bound keyup handler
+  var _boundOnTouchEnd = null;     // bound touchend handler
 
   /**
    * Core handler for any valid input event (keyboard or touch).
@@ -66,33 +69,59 @@ window.NEON.Input = (function () {
       return;
     }
 
-    // --- Keyboard ---
+    // --- Keyboard down ---
     _boundOnKey = function (e) {
       // Accept Space, Enter, ArrowUp
       if (e.code === 'Space' || e.code === 'Enter' || e.code === 'ArrowUp') {
         e.preventDefault();   // suppress page scroll on Space/ArrowUp
+        _jumpHeld = true;
         _onValidInput();
       }
     };
     window.addEventListener('keydown', _boundOnKey);
 
-    // --- Touch ---
+    // --- Keyboard up ---
+    _boundOnKeyUp = function (e) {
+      if (e.code === 'Space' || e.code === 'Enter' || e.code === 'ArrowUp') {
+        _jumpHeld = false;
+      }
+    };
+    window.addEventListener('keyup', _boundOnKeyUp);
+
+    // --- Touch down ---
     _boundOnTouch = function (e) {
       e.preventDefault();  // suppress scroll, zoom, and long-press context menus
+      _jumpHeld = true;
       _onValidInput();
     };
     canvas.addEventListener('touchstart', _boundOnTouch, { passive: false });
+
+    // --- Touch up ---
+    _boundOnTouchEnd = function (e) {
+      _jumpHeld = false;
+    };
+    canvas.addEventListener('touchend', _boundOnTouchEnd);
   }
 
   /**
-   * Must be called exactly once per frame, at the end of the frame.
-   * Clears the pressed flag so that isPressed() returns true
-   * for at most one call per frame.
-   */
-  function update() {
-    _pressedThisFrame = false;
-    _consumed = false;
-  }
+    * Must be called exactly once per frame, at the end of the frame.
+    * Clears the pressed flag so that isPressed() returns true
+    * for at most one call per frame.
+    */
+   function update() {
+     _pressedThisFrame = false;
+     _consumed = false;
+   }
+
+   /**
+    * Check whether the jump key/touch is currently held down.
+    * Returns true for the entire duration the input is active.
+    *
+    * @returns {boolean}
+    */
+   function isHeld() {
+     return _jumpHeld;
+   }
 
   /**
    * Check whether an input was registered this frame.
@@ -137,6 +166,7 @@ window.NEON.Input = (function () {
     init: init,
     update: update,
     isPressed: isPressed,
+    isHeld: isHeld,
     lock: lock,
     isLocked: isLocked
   };
