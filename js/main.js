@@ -4,7 +4,7 @@
  * Responsibilities:
  *   - 3-state FSM: 'menu' → 'playing' → 'dead' → 'playing'
  *   - requestAnimationFrame game loop with dt capped at 50ms
- *   - Score tracking with combo multiplier (increments per dash, resets on death)
+ *   - Time-based score tracking
  *   - Best score persistence via localStorage key 'neonDash_bestScore'
  *   - Mobile detection via navigator.maxTouchPoints
  *   - Module wiring: calls init/update/draw on all other NEON modules
@@ -13,7 +13,7 @@
  *   - Difficulty ramp: obstacle speed increases over elapsed time
  *   - Milestone sounds + particles every 10 points
  *   - Screen shake on death (delegated to Render)
- *   - Particle bursts on dash, death, and milestones
+ *   - Jump particles on jump, death particles, milestone particles
  *
  * Design contract:
  *   NEON.Game = { init() }
@@ -27,14 +27,13 @@ window.NEON.Game = (function () {
   /* ---- constants ---- */
   var BASE_SPEED   = 300;     // initial obstacle speed (px/s)
   var SPEED_RAMP   = 15;      // speed increase per elapsed second (px/s²)
-  var SCORE_RATE   = 10;      // base score points per second (multiplied by combo)
+  var SCORE_RATE   = 10;      // base score points per second
   var DT_CAP       = 0.05;    // max dt in seconds (prevents tunneling after tab switch)
 
   /* ---- internal state ---- */
   var state          = 'menu';   // 'menu' | 'playing' | 'dead'
   var score          = 0;
   var bestScore      = 0;
-  var combo          = 1;
   var elapsed        = 0;        // seconds spent in current play session
   var speed          = BASE_SPEED;
   var lastMilestone  = 0;        // floor(score / 10) of last triggered milestone
@@ -76,7 +75,6 @@ window.NEON.Game = (function () {
 
     // Reset tracking
     score = 0;
-    combo = 1;
     elapsed = 0;
     speed = BASE_SPEED;
     lastMilestone = 0;
@@ -88,7 +86,7 @@ window.NEON.Game = (function () {
   /**
    * Handle player death.
    * Locks input, triggers death effects (shake, particles, sound),
-   * persists best score, shows game-over overlay, resets combo.
+   * persists best score, shows game-over overlay.
    */
   function _handleDeath() {
     state = 'dead';
@@ -125,9 +123,6 @@ window.NEON.Game = (function () {
     finalScoreEl.textContent = 'Score: ' + finalScore;
     finalBestEl.textContent = 'Best: ' + bestScore;
     gameOverOverlay.classList.remove('hidden');
-
-    // Reset combo on death
-    combo = 1;
   }
 
   /**
@@ -209,23 +204,22 @@ window.NEON.Game = (function () {
     elapsed += dt;
     speed = BASE_SPEED + elapsed * SPEED_RAMP;
 
-    // ---- player physics ----
+    // ---- player physics (gravity + jump arc) ----
     NEON.Player.update(dt);
 
-    // ---- dash input ----
+    // ---- jump input ----
     if (NEON.Input.isPressed()) {
-      if (NEON.Player.dash()) {
-        // Dash executed — increment combo multiplier
-        combo++;
+      if (NEON.Player.jump()) {
+        // Jump executed — sound + particles
 
-        // Dash sound
+        // Jump sound
         NEON.Audio.playDash();
 
-        // Dash particles (small cyan burst at player centre)
-        var db = NEON.Player.getBounds();
+        // Jump particles (small cyan burst at player feet — ground level)
+        var jb = NEON.Player.getBounds();
         NEON.Particles.emit(
-          db.x + db.w / 2,
-          db.y + db.h / 2,
+          jb.x + jb.w / 2,
+          jb.y + jb.h,                    // feet / ground contact point
           5 + Math.floor(Math.random() * 4),   // 5–8 particles
           '#00ffff'
         );
@@ -238,8 +232,8 @@ window.NEON.Game = (function () {
     // ---- particles ----
     NEON.Particles.update(dt);
 
-    // ---- score (time × combo multiplier) ----
-    score += dt * combo * SCORE_RATE;
+    // ---- score (time-based) ----
+    score += dt * SCORE_RATE;
 
     // ---- milestone check (every 10 points) ----
     var currentMilestone = Math.floor(score / 10);
@@ -325,6 +319,11 @@ window.NEON.Game = (function () {
    * Draw all game entities in order.
    */
   function _drawEntities() {
+    // Ground platform (85 % of canvas height, consistent with Player/Obstacles)
+    var canvas = document.getElementById('gameCanvas');
+    var groundY = canvas.height * 0.85;
+    NEON.Render.drawGround(groundY, '#00ffff');
+
     NEON.Player.draw();
     NEON.Obstacles.draw();
     NEON.Particles.draw();
@@ -442,6 +441,8 @@ window.NEON.Game = (function () {
     // ---- wire window resize ----
     window.addEventListener('resize', function () {
       NEON.Render.resize();
+      NEON.Player.resize();
+      NEON.Obstacles.resize();
     });
 
     // ---- initial UI state ----

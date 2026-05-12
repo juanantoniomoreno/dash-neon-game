@@ -160,7 +160,7 @@ window.NEON.Render = (function () {
     // --- Core player ---
     _drawNeonRect(player.x, player.y, player.width, player.height, player.color, 4);
 
-    // --- Invincibility flash (dash i-frames) ---
+    // --- Invincibility flash (jump i-frames) ---
     if (player.isInvincible) {
       ctx.globalCompositeOperation = 'lighter';
       var t = (performance.now() % 200) / 200;   // oscillation for flicker
@@ -169,6 +169,29 @@ window.NEON.Render = (function () {
       ctx.fillRect(player.x - 3, player.y - 3, player.width + 6, player.height + 6);
       ctx.globalCompositeOperation = 'source-over';
     }
+  }
+
+  /**
+   * Draw the ground platform as a horizontal neon line.
+   *
+   * @param {number} y      Y coordinate for the ground line
+   * @param {string} [color] Hex colour for the line (defaults to '#00ffff')
+   */
+  function drawGround(y, color) {
+    color = color || '#00ffff';
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
+    ctx.stroke();
+    // Reset shadow so it doesn't leak to other draw calls
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.restore();
   }
 
   /**
@@ -340,6 +363,7 @@ window.NEON.Render = (function () {
     resize: resize,
     clear: clear,
     drawBackground: drawBackground,
+    drawGround: drawGround,
     drawPlayer: drawPlayer,
     drawObstacles: drawObstacles,
     drawParticles: drawParticles,

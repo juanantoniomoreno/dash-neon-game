@@ -2,16 +2,15 @@
  * player.js — IIFE on window.NEON.Player
  *
  * Responsibilities:
- *   - Fixed vertical lane (Y position set at init, does not change)
- *   - Dash mechanic: forward burst then drift back to base X
- *   - 80 ms invincibility frames (i-frames) after dash
- *   - Dash cooldown (250 ms) to prevent spamming
+ *   - Fixed horizontal position (15 % of canvas width from left), never changes
+ *   - Jump mechanic: vertical launch with gravity (Chrome Dinosaur style)
+ *   - 80 ms invincibility frames (i-frames) after jump
  *   - Trail buffer: last 15 positions (8 on mobile)
  *   - Exposes bounds for AABB collision with obstacles
  *
  * Design contracts:
- *   NEON.Player = { init(), update(dt), draw(), dash(),
- *                   getBounds(), isInvincible() }
+ *   NEON.Player = { init(), reset(), resize(), update(dt), draw(),
+ *                   jump(), getBounds(), isInvincible() }
  *
  * Rendering is delegated to NEON.Render.drawPlayer().
  */
@@ -24,19 +23,18 @@ window.NEON.Player = (function () {
   var WIDTH          = 24;
   var HEIGHT         = 24;
   var COLOR          = '#00ffff';   // cyan — matches the neon aesthetic
-  var IFRAME_MS      = 80;          // invincibility duration after dash
-  var COOLDOWN_MS    = 250;         // minimum time between dashes
-  var DASH_DISTANCE  = 120;         // px burst forward (right)
-  var DRIFT_SPEED    = 200;         // px/s — how fast the player drifts back
+  var IFRAME_MS      = 80;          // invincibility duration after jump
+  var GRAVITY        = 1200;        // px/s² — downward pull
+  var JUMP_VELOCITY  = -450;        // px/s — initial upward speed (negative = up)
   var TRAIL_DESKTOP  = 15;          // trail buffer size on desktop
   var TRAIL_MOBILE   = 8;           // trail buffer size on mobile
 
   /* ---- internal state ---- */
-  var x, y;                  // current position
-  var baseX;                 // rest position (drift target)
-  var dashOffset = 0;       // current forward offset from dash burst
-  var iframeTimer = 0;      // remaining i-frame time in ms
-  var cooldownTimer = 0;    // remaining cooldown time in ms
+  var x, y;                  // current position (x is fixed, y changes with jump/gravity)
+  var velocityY = 0;         // current vertical velocity (px/s)
+  var grounded = true;       // true when standing on the ground platform
+  var groundY;               // Y coordinate of the ground platform top
+  var iframeTimer = 0;       // remaining i-frame time in ms
   var trail = [];            // ring buffer of {x, y} positions
   var trailMax;              // max trail entries for this device
   var isMobile;              // cached mobile detection
@@ -45,7 +43,7 @@ window.NEON.Player = (function () {
 
   /**
    * Initialise the player entity.
-   * Discovers the canvas to set the Y lane and base X.
+   * Discovers the canvas to set the X position and ground level.
    * Must be called once after Render.init().
    */
   function init() {
@@ -59,11 +57,11 @@ window.NEON.Player = (function () {
     isMobile = navigator.maxTouchPoints > 0;
     trailMax = isMobile ? TRAIL_MOBILE : TRAIL_DESKTOP;
 
-    // Fixed lane: vertically centred
-    y = (canvas.height - HEIGHT) / 2;
+    // Fixed X: left side of screen (15 % from left edge)
+    x = canvas.width * 0.15;
 
-    // Base X: left side of screen (15 % from left edge)
-    baseX = canvas.width * 0.15;
+    // Ground platform at 85 % of canvas height
+    groundY = canvas.height * 0.85;
 
     reset();
   }
@@ -73,11 +71,30 @@ window.NEON.Player = (function () {
    * Called on game start / restart.
    */
   function reset() {
-    x = baseX;
-    dashOffset = 0;
+    // latest groundY is already set by init() or resize()
+    y = groundY - HEIGHT;  // sit on top of the ground platform
+    velocityY = 0;
+    grounded = true;
     iframeTimer = 0;
-    cooldownTimer = 0;
     trail = [];
+  }
+
+  /**
+   * Update player position to match the current canvas size.
+   * Called on window resize (wired by main.js alongside Render.resize()).
+   */
+  function resize() {
+    var canvas = document.getElementById('gameCanvas');
+    if (!canvas) return;
+
+    x = canvas.width * 0.15;
+    groundY = canvas.height * 0.85;
+
+    // Clamp Y to the new ground level so the player doesn't float or sink
+    var maxY = groundY - HEIGHT;
+    if (y > maxY) {
+      y = maxY;
+    }
   }
 
   /**
@@ -94,20 +111,21 @@ window.NEON.Player = (function () {
       if (iframeTimer < 0) iframeTimer = 0;
     }
 
-    // ---- cooldown countdown ----
-    if (cooldownTimer > 0) {
-      cooldownTimer -= dtMs;
-      if (cooldownTimer < 0) cooldownTimer = 0;
+    // ---- gravity: pull the player down when airborne ----
+    if (!grounded) {
+      velocityY += GRAVITY * dt;
     }
 
-    // ---- dash drift: decay offset back toward 0 ----
-    if (dashOffset > 0) {
-      dashOffset -= DRIFT_SPEED * dt;
-      if (dashOffset < 0) dashOffset = 0;
-    }
+    // ---- update Y position ----
+    y += velocityY * dt;
 
-    // Final X = base position + dash burst offset
-    x = baseX + dashOffset;
+    // ---- ground collision: clamp to ground level ----
+    var maxY = groundY - HEIGHT;
+    if (y >= maxY) {
+      y = maxY;
+      velocityY = 0;
+      grounded = true;
+    }
 
     // ---- trail buffer ----
     trail.push({ x: x, y: y });
@@ -135,18 +153,18 @@ window.NEON.Player = (function () {
   }
 
   /**
-   * Execute a dash.
-   * Applies a forward burst (right), starts i-frames,
-   * and puts dash on cooldown to prevent spamming.
+   * Execute a jump.
+   * Applies an upward velocity burst, starts i-frames.
+   * Only works when the player is grounded.
    *
-   * @returns {boolean}  true if dash was executed, false if on cooldown
+   * @returns {boolean}  true if jump was executed, false if airborne
    */
-  function dash() {
-    if (cooldownTimer > 0) return false;
+  function jump() {
+    if (!grounded) return false;
 
-    dashOffset    = DASH_DISTANCE;
-    iframeTimer   = IFRAME_MS;
-    cooldownTimer = COOLDOWN_MS;
+    velocityY    = JUMP_VELOCITY;
+    grounded     = false;
+    iframeTimer  = IFRAME_MS;
 
     return true;
   }
@@ -173,9 +191,10 @@ window.NEON.Player = (function () {
   return {
     init: init,
     reset: reset,
+    resize: resize,
     update: update,
     draw: draw,
-    dash: dash,
+    jump: jump,
     getBounds: getBounds,
     isInvincible: isInvincible
   };
